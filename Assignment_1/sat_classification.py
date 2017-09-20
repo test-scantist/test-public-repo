@@ -11,7 +11,7 @@ def get_sample(filename_queue):
     return values[:-1], values[-1]
 
 
-def input_batch(filename, batch_size, num_epochs=None):
+def input_batch(filename, batch_size):
     filename_queue = tf.train.string_input_producer([filename])
     features, label = get_sample(filename_queue)
     min_after_dequeue = 1000
@@ -26,18 +26,15 @@ def train(filename, batch_size, num_epochs, num_samples):
     config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
-    feature_batch, label_batch = input_batch(filename, batch_size, num_epochs)
+    feature_batch, label_batch = input_batch(filename, batch_size)
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-    try:
-        for epoch in range(num_epochs):
-            for i in range(int(np.floor(num_samples/batch_size))):
-                print (sess.run([feature_batch, label_batch]))
-    except tf.errors.OutOfRangeError:
-        print ('Done training -- epoch limit reached')
-    finally:
-        coord.request_stop()
+    for epoch in range(num_epochs):
+        for i in range(int(np.floor(num_samples/batch_size))):
+            print(sess.run([feature_batch, label_batch]))
+    coord.request_stop()
     coord.join(threads)
+    print('Done training -- epoch limit reached')
     sess.close()
 
 
