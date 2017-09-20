@@ -4,15 +4,15 @@ import tensorflow as tf
 
 
 def get_sample(filename_queue):
-    reader = tf.TextLineReader(skip_header_line=1)
+    reader = tf.TextLineReader()
     _, row = reader.read(filename_queue)
-    record_defaults = [[0.0]*36]
+    record_defaults = [[0.0]]*37
     values = tf.decode_csv(row, record_defaults=record_defaults)
-    return tf.pack(values[:-1]), values[-1]
+    return values[:-1], values[-1]
 
 
 def input_batch(filename, batch_size, num_epochs=None):
-    filename_queue = tf.train.string_input_producer([filename], num_epochs=num_epochs)
+    filename_queue = tf.train.string_input_producer([filename])
     features, label = get_sample(filename_queue)
     min_after_dequeue = 1000
     capacity = min_after_dequeue + 3 * batch_size
@@ -31,10 +31,10 @@ def train(filename, batch_size, num_epochs, num_samples):
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     try:
         for epoch in range(num_epochs):
-            for i in range(np.floor(num_samples/batch_size)):
-                print sess.run([feature_batch, label_batch])
+            for i in range(int(np.floor(num_samples/batch_size))):
+                print (sess.run([feature_batch, label_batch]))
     except tf.errors.OutOfRangeError:
-        print('Done training -- epoch limit reached')
+        print ('Done training -- epoch limit reached')
     finally:
         coord.request_stop()
     coord.join(threads)
@@ -48,7 +48,7 @@ def main():
     parser.add_argument('--batch_size', help='Batch size for training')
     parser.add_argument('--num_epochs', help='Epochs for training')
     args = parser.parse_args()
-    train(args.train_data, args.batch_size, args.num_epochs, args.train_samples)
+    train(args.train_data, int(args.batch_size), int(args.num_epochs), int(args.train_samples))
 
 
 if __name__ == "__main__":
