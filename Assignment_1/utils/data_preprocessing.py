@@ -12,6 +12,8 @@ def preprocess(filepath):
     trainX, trainY = train_input[:, :36], train_input[:, -1]
     trainX_min, trainX_max = np.min(trainX, axis=0), np.max(trainX, axis=0)
     trainX = scale(trainX, trainX_min, trainX_max)
+    trainY[trainY == 7] = 6
+    trainY = trainY-1
     trainY = np.expand_dims(trainY, -1)
     train_data = np.hstack((trainX, trainY))
     output_filepath = filepath[:filepath.rfind(".")] + ".csv"
