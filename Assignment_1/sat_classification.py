@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+import pdb
 import tensorflow as tf
 
 NUM_CLASSES = 6
@@ -41,7 +42,15 @@ def get_sample(filename_queue):
     return values[:-1], tf.cast(values[-1], tf.int32)
 
 
-def input_batch(filename, batch_size):
+def test_input_batch(filename, batch_size):
+    filename_queue = tf.train.string_input_producer([filename], num_epochs=1)
+    features, label = get_sample(filename_queue)
+    example_batch, label_batch = tf.train.batch([features, label], batch_size=batch_size,
+                                                allow_smaller_final_batch=True)
+    return example_batch, label_batch
+
+
+def train_input_batch(filename, batch_size):
     filename_queue = tf.train.string_input_producer([filename])
     features, label = get_sample(filename_queue)
     min_after_dequeue = 1000
@@ -52,12 +61,31 @@ def input_batch(filename, batch_size):
     return example_batch, label_batch
 
 
-def train(filename, num_samples, num_hidden_units, batch_size, weight_decay, log_file):
+def test(sess, filename, batch_size, num_samples, input_features, labels, accuracy, feature_batch,
+         label_batch):
+    test_acc, counter = 0, 0.0
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+    for i in range(int(np.ceil(num_samples/batch_size))):
+        pdb.set_trace()
+        in_feats, outs = sess.run([feature_batch, label_batch])
+        acc = sess.run(accuracy, feed_dict={input_features: in_feats,
+                                            labels: outs})
+        test_acc += acc
+        print(acc)
+        counter += 1
+    coord.request_stop()
+    coord.join(threads)
+    return test_acc/counter
+
+
+def train(filename, num_samples, test_filename, test_num_samples, num_hidden_units, batch_size,
+          weight_decay, log_file, input_features, labels):
     config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
     sess = tf.Session(config=config)
-    feature_batch, label_batch = input_batch(filename, batch_size)
+    feature_batch, label_batch = train_input_batch(filename, batch_size)
     global_step = tf.Variable(0, trainable=False, name="global_step")
-    train_step = train_op(feature_batch, label_batch, num_hidden_units, weight_decay, global_step)
+    train_step = train_op(input_features, labels, num_hidden_units, weight_decay, global_step)
     merged = tf.summary.merge_all()
     train_writer = tf.summary.FileWriter("./tb_logs")
     train_writer.add_graph(tf.get_default_graph())
@@ -65,17 +93,23 @@ def train(filename, num_samples, num_hidden_units, batch_size, weight_decay, log
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     sess.run(tf.global_variables_initializer())
     log_file = open('logs/'+log_file, 'w')
+    test_feature_batch, test_label_batch = test_input_batch(filename, batch_size)
     for epoch in range(NUM_EPOCHS):
         train_loss, train_acc, counter = 0, 0, 0.0
         for i in range(int(np.floor(num_samples/batch_size))):
-            step, summaries, g_s = sess.run([train_step, merged, global_step])
+            in_feats, outs = sess.run([feature_batch, label_batch])
+            step, summaries, g_s = sess.run([train_step, merged, global_step],
+                                            feed_dict={input_features: in_feats,
+                                                       labels: outs})
             train_loss += np.mean(step['Loss'])
             train_acc += step['Accuracy']
+            print("ta: ", train_acc)
             counter += 1
             train_writer.add_summary(summaries, g_s)
-        log_file.write("Epoch: %d\tTrain Loss: %.2f\tTrain Accuracy: %.2f\n" % (epoch+1,
-                                                                                train_loss/counter,
-                                                                                train_acc/counter))
+        test_acc = test(sess, test_filename, batch_size, test_num_samples, input_features, labels,
+                        train_step['Accuracy'], test_feature_batch, test_label_batch)
+        log_file.write("Epoch: %d\tTrain Loss: %.2f\tTrain Accuracy: %.2f\tTest Accuracy: %.2f\n" %
+                       (epoch+1, train_loss/counter, train_acc/counter, test_acc))
         log_file.flush()
     log_file.close()
     coord.request_stop()
@@ -84,25 +118,30 @@ def train(filename, num_samples, num_hidden_units, batch_size, weight_decay, log
     sess.close()
 
 
-def parameter_search(filename, num_samples):
+def parameter_search(filename, num_samples, test_filename, test_num_samples):
+    input_features = tf.placeholder(tf.float32, shape=[None, 36], name="input_features")
+    labels = tf.placeholder(tf.int32, shape=[None], name="labels")
     weight_decay_params = [0.0, 10e-3, 10e-6, 10e-9, 10e-12]
     batch_size_params = [4, 8, 16, 32, 64]
     num_hidden_units_params = [5, 10, 15, 20, 25]
     for weight_decay in weight_decay_params:
         for batch_size in batch_size_params:
             for num_hidden_units in num_hidden_units_params:
-                log_name = "3_mlp_%d_%d_%d.txt" % (weight_decay, batch_size, num_hidden_units)
-                print ("Evaluating "+log_name)
-                train(filename, num_samples, num_hidden_units, batch_size, weight_decay, log_name)
+                log_file = "3_mlp_%d_%d_%d.txt" % (weight_decay, batch_size, num_hidden_units)
+                print("Evaluating "+log_file)
+                train(filename, num_samples, test_filename, test_num_samples, num_hidden_units,
+                      batch_size, weight_decay, log_file, input_features, labels)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_data', help='CSV with train data')
-    parser.add_argument('--train_samples', help='No. of samples in train set')
+    parser.add_argument('--train_data', default='./dataset/sat_train.csv', help='CSV w train data')
+    parser.add_argument('--train_samples', default="4435", help='No. of samples in train set')
+    parser.add_argument('--test_data', default='./dataset/sat_test.csv', help='CSV w test data')
+    parser.add_argument('--test_samples', default="2000", help='No. of samples in test set')
 
     args = parser.parse_args()
-    parameter_search(args.train_data, int(args.train_samples))
+    parameter_search(args.train_data, int(args.train_samples), args.test_data, int(args.test_samples))
 
 
 if __name__ == "__main__":
