@@ -4,8 +4,8 @@
 ## To do :
 Question 1:     
 * [ ] Test accuracy and error.
-* [ ] Preprocess test files.
+* [x] Pre-process test files.
 * [ ] Save best model.
-* [ ] Cube Search.
+* [x] Cube Search.
 * [ ] 4 Layer MLP.
 * [ ] Report graphs generation.
