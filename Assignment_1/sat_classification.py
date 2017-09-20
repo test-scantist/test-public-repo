@@ -66,11 +66,10 @@ def train(filename, batch_size, num_epochs, num_samples):
     train_writer.add_graph(tf.get_default_graph())
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-    sess.run(tf.global_variables_initializer()) 
+    sess.run(tf.global_variables_initializer())
     for epoch in range(num_epochs):
         for i in range(int(np.floor(num_samples/batch_size))):
             step, summaries, g_s = sess.run([train_step, merged, global_step])
-            # print(sess.run([feature_batch, label_batch]))
             train_writer.add_summary(summaries, g_s)
     coord.request_stop()
     coord.join(threads)
