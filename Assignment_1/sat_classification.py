@@ -91,7 +91,7 @@ def parameter_search(filename, num_samples):
     for weight_decay in weight_decay_params:
         for batch_size in batch_size_params:
             for num_hidden_units in num_hidden_units_params:
-                log_name = "3_mlp_%d_%d_%d" % (weight_decay, batch_size, num_hidden_units)
+                log_name = "3_mlp_%d_%d_%d.txt" % (weight_decay, batch_size, num_hidden_units)
                 print ("Evaluating "+log_name)
                 train(filename, num_samples, num_hidden_units, batch_size, weight_decay, log_name)
 
