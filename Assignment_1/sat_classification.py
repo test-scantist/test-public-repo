@@ -1,4 +1,5 @@
 import argparse
+import json
 import numpy as np
 import tensorflow as tf
 
@@ -93,8 +94,7 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     sess.run(tf.global_variables_initializer())
-    log_file = open('logs/'+log_file, 'w')
-    best_test_acc = 0
+    logs = {'epoch': [], 'train_loss': [], 'train_acc': [], 'test_acc': [], 'best_acc': 0}
     for epoch in range(NUM_EPOCHS):
         train_loss, train_acc, counter = 0, 0, 0.0
         for i in range(int(np.floor(num_samples/batch_size))):
@@ -104,12 +104,15 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
             counter += 1
             train_writer.add_summary(summaries, g_s)
         test_acc = test(sess, test_step, batch_size, test_num_samples)
-        if test_acc > best_test_acc:
-            best_test_acc = test_acc
-        log_file.write("Epoch: %d\tTrain Loss: %.2f\tTrain Accuracy: %.2f\tTest Accuracy: %.2f\n" %
-                       (epoch+1, train_loss/counter, train_acc/counter, test_acc))
-        log_file.flush()
-    log_file.close()
+        if test_acc > logs['best_acc']:
+            logs['best_acc'] = test_acc
+        # Add logs
+        logs['epoch'].append(epoch)
+        logs['train_loss'].append(train_loss/counter)
+        logs['train_acc'].append(train_acc/counter)
+        logs['test_acc'].append(test_acc)
+    with open('logs/'+log_file, 'w') as outfile:
+        json.dump(logs, outfile, sort_keys=True, indent=4)
     coord.request_stop()
     coord.join(threads)
     print('Done training -- epoch limit reached')
@@ -123,7 +126,7 @@ def parameter_search(filename, num_samples, test_filename, test_num_samples):
     for weight_decay in weight_decay_params:
         for batch_size in batch_size_params:
             for num_hidden_units in num_hidden_units_params:
-                log_file = "3_mlp_%d_%d_%d.txt" % (weight_decay, batch_size, num_hidden_units)
+                log_file = "3_mlp_%d_%d_%d.json" % (weight_decay, batch_size, num_hidden_units)
                 print("Evaluating "+log_file)
                 train(filename, num_samples, test_filename, test_num_samples, num_hidden_units,
                       batch_size, weight_decay, log_file)
