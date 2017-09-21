@@ -28,19 +28,27 @@ def ops(train_inputs, train_outputs, test_inputs, test_outputs, num_hidden_units
         global_step):
     MLP = tf.make_template('3-MLP', model, num_hidden_units=num_hidden_units,
                            weight_decay=weight_decay)
-    MLP_Train = MLP(train_inputs)
-    MLP_Test = MLP(test_inputs)
+    with tf.name_scope('train_model'):
+        MLP_Train = MLP(train_inputs)
+    with tf.name_scope('test_model'):
+        MLP_Test = MLP(test_inputs)
     loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=train_outputs, logits=MLP_Train,
                                                           name="Loss")
     optimizer = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(loss, name="Optimizer",
                                                                           global_step=global_step)
-    predictions_train = tf.equal(tf.cast(tf.argmax(MLP_Train, 1), dtype=tf.int32), train_outputs)
-    train_accuracy = tf.reduce_mean(tf.cast(predictions_train, tf.float32))
-    predictions_test = tf.equal(tf.cast(tf.argmax(MLP_Test, 1), dtype=tf.int32), test_outputs)
-    test_accuracy = tf.reduce_mean(tf.cast(predictions_test, tf.float32))
+    with tf.variable_scope('train_accuracy'):
+        predictions_train = tf.equal(tf.cast(tf.argmax(MLP_Train, 1), dtype=tf.int32),
+                                     train_outputs)
+        train_accuracy = tf.reduce_mean(tf.cast(predictions_train, tf.float32))
+    with tf.variable_scope('test_accuracy'):
+        predictions_test = tf.equal(tf.cast(tf.argmax(MLP_Test, 1), dtype=tf.int32), test_outputs)
+        test_accuracy = tf.reduce_mean(tf.cast(predictions_test, tf.float32))
     tf.summary.scalar("Loss", tf.reduce_mean(loss))
     tf.summary.scalar("Accuracy", train_accuracy)
-    return {"Optimizer": optimizer, "Accuracy": train_accuracy, "Loss": loss}, test_accuracy
+    merged = tf.summary.merge_all()
+    train_op = {"Optimizer": optimizer, "Accuracy": train_accuracy, "Loss": loss, "Summary": merged}
+    test_op = {"Accuracy": test_accuracy}
+    return train_op, test_op
 
 
 def get_sample(filename_queue):
@@ -52,21 +60,24 @@ def get_sample(filename_queue):
 
 
 def test_input_batch(filename, batch_size):
-    filename_queue = tf.train.string_input_producer([filename])
-    features, label = get_sample(filename_queue)
-    example_batch, label_batch = tf.train.batch([features, label], batch_size=batch_size,
-                                                allow_smaller_final_batch=True)
+    with tf.variable_scope('test_queue'):
+        filename_queue = tf.train.string_input_producer([filename])
+        features, label = get_sample(filename_queue)
+        example_batch, label_batch = tf.train.batch([features, label], batch_size=batch_size,
+                                                    allow_smaller_final_batch=True)
     return example_batch, label_batch
 
 
 def train_input_batch(filename, batch_size):
-    filename_queue = tf.train.string_input_producer([filename])
-    features, label = get_sample(filename_queue)
-    min_after_dequeue = 1000
-    capacity = min_after_dequeue + 3 * batch_size
-    example_batch, label_batch = tf.train.shuffle_batch([features, label], batch_size=batch_size,
-                                                        capacity=capacity,
-                                                        min_after_dequeue=min_after_dequeue)
+    with tf.variable_scope('train_queue'):
+        filename_queue = tf.train.string_input_producer([filename])
+        features, label = get_sample(filename_queue)
+        min_after_dequeue = 1000
+        capacity = min_after_dequeue + 3 * batch_size
+        example_batch, label_batch = tf.train.shuffle_batch([features, label],
+                                                            batch_size=batch_size,
+                                                            capacity=capacity,
+                                                            min_after_dequeue=min_after_dequeue)
     return example_batch, label_batch
 
 
@@ -74,13 +85,14 @@ def test(sess, test_op, batch_size, num_samples):
     test_acc, counter = 0, 0.0
     for i in range(int(np.ceil(num_samples/batch_size))):
         acc = sess.run(test_op)
-        test_acc += acc
+        test_acc += acc['Accuracy']
         counter += 1
     return test_acc/counter
 
 
 def train(filename, num_samples, test_filename, test_num_samples, num_hidden_units, batch_size,
           weight_decay, log_file):
+    tf.reset_default_graph()
     config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
     sess = tf.Session(config=config)
     train_feature_batch, train_label_batch = train_input_batch(filename, batch_size)
@@ -88,7 +100,6 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
     global_step = tf.Variable(0, trainable=False, name="global_step")
     train_step, test_step = ops(train_feature_batch, train_label_batch, test_feature_batch,
                                 test_label_batch, num_hidden_units, weight_decay, global_step)
-    merged = tf.summary.merge_all()
     train_writer = tf.summary.FileWriter("./tb_logs")
     train_writer.add_graph(tf.get_default_graph())
     coord = tf.train.Coordinator()
@@ -98,11 +109,11 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
     for epoch in range(NUM_EPOCHS):
         train_loss, train_acc, counter = 0, 0, 0.0
         for i in range(int(np.floor(num_samples/batch_size))):
-            step, summaries, g_s = sess.run([train_step, merged, global_step])
+            step, g_s = sess.run([train_step, global_step])
             train_loss += np.mean(step['Loss'])
             train_acc += step['Accuracy']
             counter += 1
-            train_writer.add_summary(summaries, g_s)
+            train_writer.add_summary(step['Summary'], g_s)
         test_acc = test(sess, test_step, batch_size, test_num_samples)
         if test_acc > logs['best_acc']:
             logs['best_acc'] = test_acc
