@@ -94,6 +94,7 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     sess.run(tf.global_variables_initializer())
     log_file = open('logs/'+log_file, 'w')
+    best_test_acc = 0
     for epoch in range(NUM_EPOCHS):
         train_loss, train_acc, counter = 0, 0, 0.0
         for i in range(int(np.floor(num_samples/batch_size))):
@@ -103,6 +104,8 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
             counter += 1
             train_writer.add_summary(summaries, g_s)
         test_acc = test(sess, test_step, batch_size, test_num_samples)
+        if test_acc > best_test_acc:
+            best_test_acc = test_acc
         log_file.write("Epoch: %d\tTrain Loss: %.2f\tTrain Accuracy: %.2f\tTest Accuracy: %.2f\n" %
                        (epoch+1, train_loss/counter, train_acc/counter, test_acc))
         log_file.flush()
