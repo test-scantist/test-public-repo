@@ -6,5 +6,5 @@ Question 1:
 * [x] Test accuracy and error.
 * [x] Pre-process test files.
 * [x] Cube Search.
-* [ ] 4 Layer MLP.
+* [x] 4 Layer MLP.
 * [ ] Report graphs generation.
