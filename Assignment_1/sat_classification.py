@@ -8,7 +8,7 @@ LEARNING_RATE = 0.01
 NUM_EPOCHS = 2
 
 
-def model(inputs, num_hidden_units, weight_decay):
+def mlp_3(inputs, num_hidden_units, weight_decay):
     with tf.variable_scope('Hidden'):
         hidden = tf.contrib.layers.fully_connected(
                 inputs, num_hidden_units, activation_fn=tf.nn.sigmoid,
@@ -24,10 +24,36 @@ def model(inputs, num_hidden_units, weight_decay):
     return output
 
 
+def mlp_4(inputs, num_hidden_units, weight_decay):
+    with tf.variable_scope('Hidden_1'):
+        hidden_1 = tf.contrib.layers.fully_connected(
+                inputs, num_hidden_units, activation_fn=tf.nn.sigmoid,
+                biases_initializer=tf.zeros_initializer(),
+                weights_initializer=tf.contrib.layers.xavier_initializer(),
+                weights_regularizer=tf.contrib.layers.l2_regularizer(weight_decay))
+    with tf.variable_scope('Hidden_2'):
+        hidden_2 = tf.contrib.layers.fully_connected(
+                hidden_1, num_hidden_units, activation_fn=tf.nn.sigmoid,
+                biases_initializer=tf.zeros_initializer(),
+                weights_initializer=tf.contrib.layers.xavier_initializer(),
+                weights_regularizer=tf.contrib.layers.l2_regularizer(weight_decay))
+    with tf.variable_scope('Output'):
+        output = tf.contrib.layers.fully_connected(
+                hidden_2, NUM_CLASSES, activation_fn=None,
+                biases_initializer=tf.zeros_initializer(),
+                weights_initializer=tf.contrib.layers.xavier_initializer(),
+                weights_regularizer=tf.contrib.layers.l2_regularizer(weight_decay))
+    return output
+
+
 def ops(train_inputs, train_outputs, test_inputs, test_outputs, num_hidden_units, weight_decay,
-        global_step):
-    MLP = tf.make_template('3-MLP', model, num_hidden_units=num_hidden_units,
-                           weight_decay=weight_decay)
+        global_step, mlp_four=False):
+    if mlp_four:
+        MLP = tf.make_template('4-MLP', mlp_4, num_hidden_units=num_hidden_units,
+                               weight_decay=weight_decay)
+    else:
+        MLP = tf.make_template('3-MLP', mlp_3, num_hidden_units=num_hidden_units,
+                               weight_decay=weight_decay)
     with tf.name_scope('train_model'):
         MLP_Train = MLP(train_inputs)
     with tf.name_scope('test_model'):
@@ -91,7 +117,7 @@ def test(sess, test_op, batch_size, num_samples):
 
 
 def train(filename, num_samples, test_filename, test_num_samples, num_hidden_units, batch_size,
-          weight_decay, log_file):
+          weight_decay, log_file, mlp_four=False):
     tf.reset_default_graph()
     config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
     sess = tf.Session(config=config)
@@ -99,7 +125,8 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
     test_feature_batch, test_label_batch = test_input_batch(test_filename, batch_size)
     global_step = tf.Variable(0, trainable=False, name="global_step")
     train_step, test_step = ops(train_feature_batch, train_label_batch, test_feature_batch,
-                                test_label_batch, num_hidden_units, weight_decay, global_step)
+                                test_label_batch, num_hidden_units, weight_decay, global_step,
+                                mlp_four=mlp_four)
     train_writer = tf.summary.FileWriter("./tb_logs")
     train_writer.add_graph(tf.get_default_graph())
     coord = tf.train.Coordinator()
@@ -143,16 +170,29 @@ def parameter_search(filename, num_samples, test_filename, test_num_samples):
                       batch_size, weight_decay, log_file)
 
 
+def run_mlp_4(filename, num_samples, test_filename, test_num_samples):
+    batch_size, weight_decay, num_hidden_units = 32, 10e-6, 10
+    log_file = "4_mlp_%d_%d_%d.json" % (weight_decay, batch_size, num_hidden_units)
+    print("Evaluating "+log_file)
+    train(filename, num_samples, test_filename, test_num_samples, num_hidden_units,
+          batch_size, weight_decay, log_file, mlp_four=True)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_data', default='./dataset/sat_train.csv', help='CSV w train data')
     parser.add_argument('--train_samples', default="4435", help='No. of samples in train set')
     parser.add_argument('--test_data', default='./dataset/sat_test.csv', help='CSV w test data')
     parser.add_argument('--test_samples', default="2000", help='No. of samples in test set')
+    parser.add_argument('--mlp_four', default="False", help='If have to use 4 layer mlp')
 
     args = parser.parse_args()
-    parameter_search(args.train_data, int(args.train_samples), args.test_data,
-                     int(args.test_samples))
+    if(args.mlp_four == 'True'):
+        run_mlp_4(args.train_data, int(args.train_samples), args.test_data,
+                  int(args.test_samples))
+    else:
+        parameter_search(args.train_data, int(args.train_samples), args.test_data,
+                         int(args.test_samples))
 
 
 if __name__ == "__main__":
