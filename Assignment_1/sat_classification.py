@@ -1,7 +1,6 @@
 import argparse
 import json
 import numpy as np
-import time
 import tensorflow as tf
 
 NUM_CLASSES = 6
@@ -136,7 +135,6 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
     logs = {'epoch': [], 'train_loss': [], 'train_acc': [], 'test_acc': [], 'best_acc': 0}
     for epoch in range(NUM_EPOCHS):
         train_loss, train_acc, counter = 0, 0, 0.0
-	t_s = time.time()
         for i in range(int(np.floor(num_samples/batch_size))):
             step, g_s = sess.run([train_step, global_step])
             train_loss += np.mean(step['Loss'])
@@ -147,7 +145,6 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
         if test_acc > logs['best_acc']:
             logs['best_acc'] = test_acc
         # Add logs
-	t_s = time.time()
         logs['epoch'].append(epoch)
         logs['train_loss'].append(train_loss/counter)
         logs['train_acc'].append(train_acc/counter)
@@ -161,7 +158,7 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
 
 
 def parameter_search(filename, num_samples, test_filename, test_num_samples):
-    weight_decay_params = [10e-3] #[0.0, 10e-3, 10e-6, 10e-9, 10e-12]
+    weight_decay_params = [0.0, 10e-3, 10e-6, 10e-9, 10e-12]
     batch_size_params = [4, 8, 16, 32, 64]
     num_hidden_units_params = [5, 10, 15, 20, 25]
     for weight_decay in weight_decay_params:
