@@ -18,11 +18,14 @@ def preprocess(filepath):
     x_data, y_data = input_data[:, :8], input_data[:, 8]
     x_data = normalize(scale(x_data))
     y_data = np.expand_dims(y_data, -1)
-    print x_data.shape, y_data.shape
-    train_data = np.hstack((x_data, y_data))
-    print train_data.shape
-    output_filepath = filepath[:filepath.rfind(".")] + ".csv"
-    np.savetxt(output_filepath, train_data, delimiter=",")
+    data = np.hstack((x_data, y_data))
+    np.random.shuffle(data)
+    train_split = int(data.shape[0]*0.7)
+    train_data = data[:train_split, :]
+    test_data = data[train_split:, :]
+    output_filepath = filepath[:filepath.rfind(".")]
+    np.save(output_filepath+"_train", train_data)
+    np.save(output_filepath+"_test", test_data)
 
 
 def main():
