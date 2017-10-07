@@ -158,7 +158,7 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
 
 
 def parameter_search(filename, num_samples, test_filename, test_num_samples):
-    weight_decay_params = [0.0, 10e-3, 10e-6, 10e-9, 10e-12]
+    weight_decay_params = [1e-12] #[0.0, 1e-3, 1e-6, 1e-9, 1e-12]
     batch_size_params = [4, 8, 16, 32, 64]
     num_hidden_units_params = [5, 10, 15, 20, 25]
     for weight_decay in weight_decay_params:
@@ -171,7 +171,7 @@ def parameter_search(filename, num_samples, test_filename, test_num_samples):
 
 
 def run_mlp_4(filename, num_samples, test_filename, test_num_samples):
-    batch_size, weight_decay, num_hidden_units = 32, 10e-6, 10
+    batch_size, weight_decay, num_hidden_units = 32, 1e-6, 10
     log_file = "4_mlp_%s_%d_%d.json" % (weight_decay, batch_size, num_hidden_units)
     print("Evaluating "+log_file)
     train(filename, num_samples, test_filename, test_num_samples, num_hidden_units,
