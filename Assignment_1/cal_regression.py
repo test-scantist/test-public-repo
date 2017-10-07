@@ -92,7 +92,13 @@ def ops(inputs, outputs, num_hidden_units, learning_rate, mlp_layers=3):
     return train_test_op
 
 
-def train_test(filename, test_filename, num_hidden_units, learning_rate, log_file, mlp_layers=3):    
+def shuffle_data(x_data, y_data):
+    data = np.hstack([x_data, y_data])
+    np.random.shuffle(data)
+    return data[:, :8], data[:, 8:]
+
+
+def train_test(filename, test_filename, num_hidden_units, learning_rate, log_file, mlp_layers=3):
     train_data = np.load(filename)
     train_x, train_y = train_data[:, :8], train_data[:, 8:]
     test_data = np.load(test_filename)
@@ -102,6 +108,7 @@ def train_test(filename, test_filename, num_hidden_units, learning_rate, log_fil
     split_counter = 0
     for train_index, val_index in kf.split(train_x):
         split_counter += 1
+        print 'Evaluating %s Split %d' % (log_file, split_counter)
         tf.reset_default_graph()
         x = tf.placeholder(tf.float32, shape=(None, 8))
         y = tf.placeholder(tf.float32, shape=(None))
@@ -117,6 +124,7 @@ def train_test(filename, test_filename, num_hidden_units, learning_rate, log_fil
             sess.run(tf.global_variables_initializer())
             logs = {'epoch': [], 'train_loss': [], 'train_acc': [], 'val_acc': [], 'test_acc': 0}
             for epoch in range(NUM_EPOCHS):
+                x_train, y_train = shuffle_data(x_train, y_train)
                 train_loss, train_acc, train_counter = 0, 0, 0
                 for i in range(train_iters):
                     step = sess.run(train_test_step, feed_dict={
@@ -144,7 +152,7 @@ def train_test(filename, test_filename, num_hidden_units, learning_rate, log_fil
                 test_acc += step
                 test_counter += 1
             logs['test_acc'] = test_acc/test_counter
-            with open('temp_logs/'+log_file+"_split_"+str(split_counter)+'.json', 'w') as outfile:
+            with open('logs_2/'+log_file+"_split_"+str(split_counter)+'.json', 'w') as outfile:
                 json.dump(logs, outfile, sort_keys=True, indent=4)
             print('Done training -- epoch limit reached')
             sess.close()
