@@ -2,6 +2,7 @@ import argparse
 import json
 import numpy as np
 import tensorflow as tf
+import time
 
 NUM_CLASSES = 6
 LEARNING_RATE = 0.01
@@ -157,8 +158,34 @@ def train(filename, num_samples, test_filename, test_num_samples, num_hidden_uni
     sess.close()
 
 
+def time_check(filename, test_filename, num_hidden_units, batch_size):
+    tf.reset_default_graph()
+    config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
+    sess = tf.Session(config=config)
+    train_feature_batch, train_label_batch = train_input_batch(filename, batch_size)
+    test_feature_batch, test_label_batch = test_input_batch(test_filename, batch_size)
+    global_step = tf.Variable(0, trainable=False, name="global_step")
+    train_step, test_step = ops(train_feature_batch, train_label_batch, test_feature_batch,
+                                test_label_batch, num_hidden_units, 1e-6, global_step,
+                                mlp_four=False)
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+    sess.run(tf.global_variables_initializer())
+    t_s = time.time()
+    avg_time = 0
+    for i in range(1000):
+        sess.run(train_step)
+        time_taken = time.time() - t_s
+        t_s = time.time()
+        avg_time += time_taken
+    print 'Average Time Taken: %s s' % (avg_time / 1000)
+    coord.request_stop()
+    coord.join(threads)
+    sess.close()
+
+
 def parameter_search(filename, num_samples, test_filename, test_num_samples):
-    weight_decay_params = [1e-12] #[0.0, 1e-3, 1e-6, 1e-9, 1e-12]
+    weight_decay_params = [0.0, 1e-3, 1e-6, 1e-9, 1e-12]
     batch_size_params = [4, 8, 16, 32, 64]
     num_hidden_units_params = [5, 10, 15, 20, 25]
     for weight_decay in weight_decay_params:
@@ -178,6 +205,17 @@ def run_mlp_4(filename, num_samples, test_filename, test_num_samples):
           batch_size, weight_decay, log_file, mlp_four=True)
 
 
+def time_run(filename, num_samples):
+    batch_size_params = [4, 8, 16, 32, 64]
+    num_hidden_units_params = [5, 10, 15, 20, 25]
+    for bs in batch_size_params:
+        print 'Batch %s' % (bs)
+        time_check(filename, num_samples, 10, bs)
+    for nu in num_hidden_units_params:
+        print 'Num Units %s' % (nu)
+        time_check(filename, num_samples, nu, 32)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_data', default='./dataset/sat_train.csv', help='CSV w train data')
@@ -187,12 +225,15 @@ def main():
     parser.add_argument('--mlp_four', default="False", help='If have to use 4 layer mlp')
 
     args = parser.parse_args()
+
+    # for timing experiments
+    # time_run(args.train_data, args.test_data)
     if(args.mlp_four == 'True'):
-        run_mlp_4(args.train_data, int(args.train_samples), args.test_data,
-                  int(args.test_samples))
+       run_mlp_4(args.train_data, int(args.train_samples), args.test_data,
+                 int(args.test_samples))
     else:
-        parameter_search(args.train_data, int(args.train_samples), args.test_data,
-                         int(args.test_samples))
+       parameter_search(args.train_data, int(args.train_samples), args.test_data,
+                        int(args.test_samples))
 
 
 if __name__ == "__main__":
