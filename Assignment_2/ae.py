@@ -59,13 +59,11 @@ class StackedAutoEncoder:
         for w, b in zip(self.weights_e, self.biases_e):
             weight = tf.constant(w, dtype=tf.float32)
             bias = tf.constant(b, dtype=tf.float32)
-            print weight, bias
             layer = tf.matmul(x, weight) + bias
             x = tf.nn.sigmoid(layer)
-        for w, b in zip(self.weights_d, self.biases_d):
+        for w, b in zip(self.weights_d[::-1], self.biases_d[::-1]):
             weight = tf.constant(w, dtype=tf.float32)
             bias = tf.constant(b, dtype=tf.float32)
-            print weight, bias
             layer = tf.matmul(x, weight) + bias
             x = tf.nn.sigmoid(layer)
         return corrupted_data, x.eval(session=sess)
@@ -111,7 +109,7 @@ def main():
     trX, trY, teX, teY = mnist.train.images, mnist.train.labels,\
         mnist.test.images, mnist.test.labels
 
-    model = StackedAutoEncoder(dims=[400, 625, 900], epoch=1)
+    model = StackedAutoEncoder(dims=[900, 625, 400])
     model.fit(trX)
     corrupted, clean = model.transform(teX)
     save_images(np.reshape(clean[:100], [100, 28, 28]), [10, 10], 'plots/clean.png')
