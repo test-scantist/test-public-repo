@@ -9,7 +9,7 @@ from scipy.misc import imsave
 
 # They following functions save images in a grid
 def save_images(images, size, image_path):
-    return imsave(image_path, merge(images, size))
+    return imsave('plots/'+image_path, merge(images, size))
 
 
 def merge(images, size, spacing=5):

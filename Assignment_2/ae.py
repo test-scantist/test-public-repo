@@ -94,12 +94,13 @@ class StackedAutoEncoder:
             l = sess.run(loss, feed_dict={x: data_x, x_: data_x_})
             train_errors.append(l)
             print('epoch {0}: loss = {1}'.format(epoch, l))
-        save_plot(train_errors, "ae_%d_layer_%d" % (self.config, num))
         self.loss_val.append(l)
         self.weights_e.append(sess.run(encode['weights']))
         self.biases_e.append(sess.run(encode['biases']))
         self.weights_d.append(sess.run(decode['weights']))
         self.biases_d.append(sess.run(decode['biases']))
+        save_plot(train_errors, "ae_%d_layer_%d" % (self.config, num))
+	save_images(np.reshape(self.weights_e[-1][:,:100], [100] + [np.sqrt(input_dim)]*2), [10, 10], 'weights_%d_layer_%d.png' % (self.config, num))
         return sess.run(encoded, feed_dict={x: data_x_})
 
 
@@ -112,8 +113,8 @@ def main():
     model = StackedAutoEncoder(dims=[900, 625, 400])
     model.fit(trX)
     corrupted, clean = model.transform(teX)
-    save_images(np.reshape(clean[:100], [100, 28, 28]), [10, 10], 'plots/clean.png')
-    save_images(np.reshape(corrupted[:100], [100, 28, 28]), [10, 10], 'plots/corrupted.png')
+    save_images(np.reshape(clean[:100], [100, 28, 28]), [10, 10], 'clean.png')
+    save_images(np.reshape(corrupted[:100], [100, 28, 28]), [10, 10], 'corrupted.png')
 
 
 if __name__ == "__main__":
