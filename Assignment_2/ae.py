@@ -4,11 +4,6 @@ import numpy as np
 from misc.utils import save_images, save_plot
 from tensorflow.examples.tutorials.mnist import input_data
 
-corruption_level = 0.1
-training_epochs = 25
-learning_rate = 0.1
-batch_size = 128
-
 
 def init_weights(n_visible, n_hidden, name):
     init_w_max = 4 * np.sqrt(6. / (n_visible + n_hidden))
@@ -56,11 +51,15 @@ class StackedAutoEncoder:
         sess = tf.Session()
         corrupted_data = self.add_noise(data)
         x = tf.constant(np.copy(corrupted_data), dtype=tf.float32)
+	counter = 1
         for w, b in zip(self.weights_e, self.biases_e):
             weight = tf.constant(w, dtype=tf.float32)
             bias = tf.constant(b, dtype=tf.float32)
             layer = tf.matmul(x, weight) + bias
             x = tf.nn.sigmoid(layer)
+	    out = x.eval(session=sess)
+	    save_images(np.reshape(out[:100], [100] + [np.sqrt(out.shape[1])]*2), [10, 10], 'activations_%d_layer_%d.png' % (self.config, counter))
+	    counter += 1
         for w, b in zip(self.weights_d[::-1], self.biases_d[::-1]):
             weight = tf.constant(w, dtype=tf.float32)
             bias = tf.constant(b, dtype=tf.float32)
@@ -100,7 +99,7 @@ class StackedAutoEncoder:
         self.weights_d.append(sess.run(decode['weights']))
         self.biases_d.append(sess.run(decode['biases']))
         save_plot(train_errors, "ae_%d_layer_%d" % (self.config, num))
-	save_images(np.reshape(self.weights_e[-1][:,:100], [100] + [np.sqrt(input_dim)]*2), [10, 10], 'weights_%d_layer_%d.png' % (self.config, num))
+	save_images(np.reshape(np.transpose(self.weights_e[-1])[:100], [100] + [np.sqrt(input_dim)]*2), [10, 10], 'weights_%d_layer_%d.png' % (self.config, num))
         return sess.run(encoded, feed_dict={x: data_x_})
 
 
