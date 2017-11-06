@@ -93,7 +93,7 @@ class StackedAutoEncoder:
                 sess.run(train_op, feed_dict={x: b_x, x_: b_x_})
             l = sess.run(loss, feed_dict={x: data_x, x_: data_x_})
             train_errors.append(l)
-            print('epoch %d: loss = %.2d' % (epoch, l))
+            print('epoch %d: loss = %.2f' % (epoch, l))
         self.loss_val.append(l)
         self.weights_e.append(sess.run(encode['weights']))
         self.biases_e.append(sess.run(encode['biases']))
@@ -110,14 +110,25 @@ class StackedAutoEncoder:
         sess = tf.Session()
         x = tf.placeholder(dtype=tf.float32, shape=[None, 784], name='x')
         y_ = tf.placeholder(tf.float32, [None, 10], name='y_')
-        for w, b in zip(self.weights_e, self.biases_e):
-            weight = tf.Variable(w, dtype=tf.float32)
-            bias = tf.Variable(b, dtype=tf.float32)
+        with tf.name_scope('Hidden_1'):
+            weight = tf.Variable(self.weights_e[0], dtype=tf.float32)
+            bias = tf.Variable(self.biases_e[0], dtype=tf.float32)
             layer = tf.matmul(x, weight) + bias
-            x = tf.nn.sigmoid(layer)
-        w_out = init_weights(self.dims[-1], 10, 'w_out')
-        b_out = init_bias(10, 'b_out')
-        out = tf.matmul(x, w_out) + b_out
+            out = tf.nn.sigmoid(layer)
+        with tf.name_scope('Hidden_2'):
+            weight = tf.Variable(self.weights_e[1], dtype=tf.float32)
+            bias = tf.Variable(self.biases_e[1], dtype=tf.float32)
+            layer = tf.matmul(out, weight) + bias
+            out = tf.nn.sigmoid(layer)
+        with tf.name_scope('Hidden_3'):
+            weight = tf.Variable(self.weights_e[2], dtype=tf.float32)
+            bias = tf.Variable(self.biases_e[2], dtype=tf.float32)
+            layer = tf.matmul(out, weight) + bias
+            out = tf.nn.sigmoid(layer)
+        with tf.name_scope('Output'):
+	    w_out = init_weights(self.dims[-1], 10, 'w_out')
+            b_out = init_bias(10, 'b_out')
+            out = tf.matmul(out, w_out) + b_out
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=out))
         correct_prediction = tf.equal(tf.argmax(out, 1), tf.argmax(y_, 1))
         correct_prediction = tf.cast(correct_prediction, tf.float32)
@@ -136,11 +147,11 @@ class StackedAutoEncoder:
             acc = sess.run(accuracy, feed_dict={x: mnist.test.images, y_: mnist.test.labels})
             train_errors.append(l)
             test_accuracy.append(acc)
-            print('epoch %d: loss = %.2d, accuracy = %.2d' % (epoch, l, acc))
+            print('epoch %d: loss = %.2f, accuracy = %.2f' % (epoch, l, acc))
         save_plot(train_errors, "ae_classify_%d_train_error" % (self.config),
                   ylabel="Categorical Cross Entropy Loss")
         save_plot(test_accuracy, "ae_classify_%d_test_acc" % (self.config), label="test_accuracy",
-                  y_label="Accuracy")
+                  ylabel="Accuracy")
 
 
 def main():
