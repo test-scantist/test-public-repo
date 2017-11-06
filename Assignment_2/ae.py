@@ -65,10 +65,10 @@ class StackedAutoEncoder:
             bias = tf.constant(b, dtype=tf.float32)
             layer = tf.matmul(x, weight) + bias
             x = tf.nn.sigmoid(layer)
-        out = x.eval(session=sess)
-        save_images(np.reshape(out[:100], [100] + [np.sqrt(out.shape[1])]*2), [10, 10],
-                    'activations_%d_layer_%d.png' % (self.config, counter))
-        counter += 1
+            out = x.eval(session=sess)
+            save_images(np.reshape(out[:100], [100] + [np.sqrt(out.shape[1])]*2), [10, 10],
+                        'activations_%d_layer_%d.png' % (self.config, counter))
+            counter += 1
         for w, b in zip(self.weights_d[::-1], self.biases_d[::-1]):
             weight = tf.constant(w, dtype=tf.float32)
             bias = tf.constant(b, dtype=tf.float32)
@@ -97,7 +97,7 @@ class StackedAutoEncoder:
             loss = -tf.reduce_mean(tf.reduce_sum(x_*tf.log(decoded) + (1-x_)*tf.log(1-decoded),
                                    axis=1)) +\
                     self.penalty*self.kl_divergence(self.sparsity, encoded) +\
-                    self.penalty*self.kl_divergence(self.sparsity, decoded) +\
+                    self.penalty*self.kl_divergence(self.sparsity, decoded)
             train_op = tf.train.MomentumOptimizer(self.lr, self.momentum).minimize(loss)
 
         sess.run(tf.global_variables_initializer())
@@ -175,7 +175,7 @@ def main():
     mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
     trX, teX = mnist.train.images, mnist.test.images
 
-    config = 2 # use 2 for sparsity constraint with momentum optimizer
+    config = 2  # use 2 for sparsity constraint with momentum optimizer
 
     model = StackedAutoEncoder(dims=[900, 625, 400], config=config)
     model.fit(trX)
