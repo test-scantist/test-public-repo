@@ -8,11 +8,11 @@ from scipy.misc import imsave
 
 
 # They following functions save images in a grid
-def save_images(images, size, image_path):
-    return imsave('plots/'+image_path, merge(images, size))
+def save_images(images, size, image_path, spacing=5):
+    return imsave('plots/'+image_path, merge(images, size, spacing=spacing))
 
 
-def merge(images, size, spacing=5):
+def merge(images, size, spacing):
     h, w = images.shape[1], images.shape[2]
     img = np.ones(((h+spacing) * size[0] + spacing, (w+spacing) * size[1] + spacing))
 

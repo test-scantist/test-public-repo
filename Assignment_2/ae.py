@@ -175,13 +175,13 @@ def main():
     mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
     trX, teX = mnist.train.images, mnist.test.images
 
-    config = 2  # use 2 for sparsity constraint with momentum optimizer
+    config = 1  # use 2 for sparsity constraint with momentum optimizer
 
     model = StackedAutoEncoder(dims=[900, 625, 400], config=config)
     model.fit(trX)
     corrupted, clean = model.transform(teX)
-    save_images(np.reshape(clean[:100], [100, 28, 28]), [10, 10], 'clean_%d.png' % (config))
-    save_images(np.reshape(corrupted[:100], [100, 28, 28]), [10, 10], 'corrupted_%d.png' % (config))
+    save_images(np.reshape(clean[:100], [100, 28, 28]), [10, 10], 'clean_%d.png' % (config), spacing=0)
+    save_images(np.reshape(corrupted[:100], [100, 28, 28]), [10, 10], 'corrupted_%d.png' % (config), spacing=0)
     model.classify(mnist)
 
 
