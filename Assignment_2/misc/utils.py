@@ -14,7 +14,7 @@ def save_images(images, size, image_path):
 
 def merge(images, size, spacing=5):
     h, w = images.shape[1], images.shape[2]
-    img = np.zeros(((h+spacing) * size[0], (w+spacing) * size[1]))
+    img = np.ones(((h+spacing) * size[0], (w+spacing) * size[1]))
 
     for idx, image in enumerate(images):
         i = idx % size[1]
@@ -30,3 +30,4 @@ def save_plot(vals, name, label="train_error", xlabel="epoch", ylabel="Cross Ent
     plt.xlabel(xlabel)
     plt.legend()
     plt.savefig("plots/"+name, dpi=300)
+    plt.clf()
