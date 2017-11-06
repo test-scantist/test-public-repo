@@ -35,7 +35,8 @@ class StackedAutoEncoder:
         self.dims = dims
         self.depth = len(dims)
         self.corruption_level = corruption_level
-        self.weights, self.biases = [], []
+        self.weights_e, self.biases_e = [], []
+        self.weights_d, self.biases_d = [], []
         self.loss_val = []
 
     def add_noise(self, x):
@@ -50,13 +51,19 @@ class StackedAutoEncoder:
     def transform(self, data):
         tf.reset_default_graph()
         sess = tf.Session()
-        x = tf.constant(data, dtype=tf.float32)
-        for w, b in zip(self.weights, self.biases):
+        corrupted_data = self.add_noise(data)
+        x = tf.constant(np.copy(corrupted_data), dtype=tf.float32)
+        for w, b in zip(self.weights_e, self.biases_e):
             weight = tf.constant(w, dtype=tf.float32)
             bias = tf.constant(b, dtype=tf.float32)
             layer = tf.matmul(x, weight) + bias
             x = tf.nn.sigmoid(layer)
-        return x.eval(session=sess)
+        for w, b in zip(self.weights_d, self.biases_d):
+            weight = tf.constant(w, dtype=tf.float32)
+            bias = tf.constant(b, dtype=tf.float32)
+            layer = tf.matmul(x, weight) + bias
+            x = tf.nn.sigmoid(layer)
+        return corrupted_data, x.eval(session=sess)
 
     def run(self, data_x, data_x_, hidden_dim, num):
         tf.reset_default_graph()
@@ -83,8 +90,10 @@ class StackedAutoEncoder:
             l = sess.run(loss, feed_dict={x: data_x, x_: data_x_})
             print('epoch {0}: loss = {1}'.format(epoch, l))
         self.loss_val.append(l)
-        self.weights.append(sess.run(encode['weights']))
-        self.biases.append(sess.run(encode['biases']))
+        self.weights_e.append(sess.run(encode['weights']))
+        self.biases_e.append(sess.run(encode['biases']))
+        self.weights_d.append(sess.run(decode['weights']))
+        self.biases_d.append(sess.run(decode['biases']))
         return sess.run(encoded, feed_dict={x: data_x_})
 
 
@@ -94,9 +103,11 @@ def main():
     trX, trY, teX, teY = mnist.train.images, mnist.train.labels,\
         mnist.test.images, mnist.test.labels
 
-    model = StackedAutoEncoder(dims=[900, 625, 400])
+    model = StackedAutoEncoder(dims=[400, 625, 900])
     model.fit(trX)
-    test_X_ = model.transform(teX)
+    corrupted, clean = model.transform(teX)
+    np.save('noisy_data', corrupted)
+    np.save('clean_data', clean)
 
 
 if __name__ == "__main__":
