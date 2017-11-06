@@ -25,7 +25,8 @@ def get_batch(X, X_, size):
 
 class StackedAutoEncoder:
 
-    def __init__(self, dims, epoch=25, lr=0.1, batch_size=128, corruption_level=0.1, config=1):
+    def __init__(self, dims, epoch=25, lr=0.1, batch_size=128, corruption_level=0.1, config=1,
+                 penalty=0.5, sparsity=0.05, momentum=0.1):
         self.batch_size = batch_size
         self.lr = lr
         self.epoch = epoch
@@ -36,9 +37,16 @@ class StackedAutoEncoder:
         self.weights_d, self.biases_d = [], []
         self.loss_val = []
         self.config = config
+        self.penalty = penalty
+        self.sparsity = sparsity
+        self.momentum = momentum
 
     def add_noise(self, x):
         return np.random.binomial(n=1, p=1-self.corruption_level, size=x.shape)*x
+
+    def kl_divergence(self, p, p_hat):
+        return tf.reduce_mean(p * tf.log(p) - p * tf.log(p_hat) + (1 - p) * tf.log(1 - p) -
+                              (1 - p) * tf.log(1 - p_hat))
 
     def fit(self, x):
         for i in range(self.depth):
@@ -81,8 +89,16 @@ class StackedAutoEncoder:
         encoded = tf.nn.sigmoid(tf.matmul(x, encode['weights']) + encode['biases'])
         decoded = tf.nn.sigmoid(tf.matmul(encoded, decode['weights']) + decode['biases'])
 
-        loss = -tf.reduce_mean(tf.reduce_sum(x_*tf.log(decoded) + (1-x_)*tf.log(1-decoded), axis=1))
-        train_op = tf.train.GradientDescentOptimizer(self.lr).minimize(loss)
+        if self.config == 1:
+            loss = -tf.reduce_mean(tf.reduce_sum(x_*tf.log(decoded) + (1-x_)*tf.log(1-decoded),
+                                   axis=1))
+            train_op = tf.train.GradientDescentOptimizer(self.lr).minimize(loss)
+        elif self.config == 2:
+            loss = -tf.reduce_mean(tf.reduce_sum(x_*tf.log(decoded) + (1-x_)*tf.log(1-decoded),
+                                   axis=1)) +\
+                    self.penalty*self.kl_divergence(self.sparsity, encoded) +\
+                    self.penalty*self.kl_divergence(self.sparsity, decoded) +\
+            train_op = tf.train.MomentumOptimizer(self.lr, self.momentum).minimize(loss)
 
         sess.run(tf.global_variables_initializer())
         num_iters = input_dim//self.batch_size
@@ -126,7 +142,7 @@ class StackedAutoEncoder:
             layer = tf.matmul(out, weight) + bias
             out = tf.nn.sigmoid(layer)
         with tf.name_scope('Output'):
-	    w_out = init_weights(self.dims[-1], 10, 'w_out')
+            w_out = init_weights(self.dims[-1], 10, 'w_out')
             b_out = init_bias(10, 'b_out')
             out = tf.matmul(out, w_out) + b_out
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=out))
@@ -159,11 +175,13 @@ def main():
     mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
     trX, teX = mnist.train.images, mnist.test.images
 
-    model = StackedAutoEncoder(dims=[900, 625, 400])
+    config = 2 # use 2 for sparsity constraint with momentum optimizer
+
+    model = StackedAutoEncoder(dims=[900, 625, 400], config=config)
     model.fit(trX)
     corrupted, clean = model.transform(teX)
-    save_images(np.reshape(clean[:100], [100, 28, 28]), [10, 10], 'clean.png')
-    save_images(np.reshape(corrupted[:100], [100, 28, 28]), [10, 10], 'corrupted.png')
+    save_images(np.reshape(clean[:100], [100, 28, 28]), [10, 10], 'clean_%d.png' % (config))
+    save_images(np.reshape(corrupted[:100], [100, 28, 28]), [10, 10], 'corrupted_%d.png' % (config))
     model.classify(mnist)
 
 
