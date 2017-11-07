@@ -1,10 +1,10 @@
-import matplotlib
-matplotlib.use('Agg')
+from scipy.misc import imsave
 
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 
-from scipy.misc import imsave
+matplotlib.use('Agg')
 
 
 # They following functions save images in a grid
