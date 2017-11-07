@@ -34,39 +34,28 @@ def deepnn(x, save_image=False):
         x_image = tf.reshape(x, [-1, 28, 28, 1])
 
     # First convolutional layer - maps one grayscale image to 15 feature maps.
+    # Output shape = [-1, 20, 20, 15]
     with tf.name_scope('conv1'):
         W_conv1 = weight_variable([9, 9, 1, 15])
         b_conv1 = bias_variable([15])
         h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
 
-    if save_image:
-        save_images(np.reshape(h_conv1[:2], [2] + h_conv1.shape[1:]), [1, 2],
-                    'C1_layer_%d.png' % (config))
-
     # Pooling layer - downsamples by 2X.
+    # Output shape = [-1, 10, 10, 15]
     with tf.name_scope('pool1'):
         h_pool1 = max_pool_2x2(h_conv1)
 
-    if save_image:
-        save_images(np.reshape(h_pool1[:2], [2] + h_pool1.shape[1:]), [1, 2],
-                    'S1_layer_%d.png' % (config))
-
     # Second convolutional layer -- maps 15 feature maps to 20.
+    # Output shape = [-1, 6, 6, 20]
     with tf.name_scope('conv2'):
         W_conv2 = weight_variable([5, 5, 15, 20])
         b_conv2 = bias_variable([20])
         h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
 
-    if save_image:
-        save_images(np.reshape(h_conv2[:2], [2] + h_conv2.shape[1:]), [1, 2],
-                    'C2_layer_%d.png' % (config))
-
     # Second pooling layer.
+    # Output shape = [-1, 3, 3, 20]
     with tf.name_scope('pool2'):
         h_pool2 = max_pool_2x2(h_conv2)
-    if save_image:
-        save_images(np.reshape(h_pool2[:2], [2] + h_pool2.shape[1:]), [1, 2],
-                    'S2_layer_%d.png' % (config))
 
     # Fully connected layer 1 -- after 2 round of downsampling, our 28x28 image
     # is down to 3x3x20 feature maps -- maps this to 100 features.
@@ -83,6 +72,8 @@ def deepnn(x, save_image=False):
         b_fc2 = bias_variable([10])
 
         y_conv = tf.matmul(h_fc1, W_fc2) + b_fc2
+    if save_image:
+        return h_conv1, h_pool1, h_conv2, h_pool2
     return y_conv
 
 
@@ -122,12 +113,16 @@ def main(_):
 
     # Build the graph for the deep net
     y_conv = deepnn(x)
+    
+    # for Images
+    feature_maps = deepnn(x, True)
+
     with tf.name_scope('loss'):
         cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_,
                                                                 logits=y_conv)
     cross_entropy = tf.reduce_mean(cross_entropy)
     vars = tf.trainable_variables()
-    lossL2 = tf.add_n([tf.nn.l2_loss(v) for v in vars if 'bias' not in v.name]) * 0.001
+    lossL2 = tf.add_n([tf.nn.l2_loss(v) for v in vars if 'weight' in v.name]) * 0.0001
     cross_entropy += lossL2
     if config == 1:
         with tf.name_scope('Optimizer'):
@@ -148,7 +143,6 @@ def main(_):
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        print(sess.run(vars))
         num_iters = trX.shape[0]//batch_size
         train_errors = []
         test_accuracy = []
@@ -165,6 +159,14 @@ def main(_):
                   ylabel="Categorical Cross Entropy Loss")
         save_plot(test_accuracy, "cnn_classify_%d_test_acc" % (config), label="test_accuracy",
                   ylabel="Accuracy")
+        C1, S1, C2, S2 = sess.run(feature_maps, feed_dict={x: teX, y_: teY})
+        names = ["C1", "S1", "C2", "S2"]
+        i = 0
+        for arr, shape in zip([C1, S1, C2, S2], [[5, 6], [5, 6], [5, 8], [5, 8]]):
+            temp = np.reshape(np.transpose(arr[:2], (0, 3, 1, 2)), [-1, arr.shape[1], arr.shape[2]])
+            save_images(temp, shape,
+                        '%s_layer_%d.png' % (names[i], config))
+            i += 1
 
 
 if __name__ == '__main__':
