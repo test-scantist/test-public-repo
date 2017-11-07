@@ -13,7 +13,7 @@ batch_size = 128
 decay_param = 0.0001
 momentum_param = 0.1
 num_epochs = 100
-config = 1
+config = 3
 
 
 def deepnn(x, save_image=False):
