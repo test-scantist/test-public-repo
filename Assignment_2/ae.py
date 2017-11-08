@@ -45,10 +45,9 @@ class StackedAutoEncoder:
         return np.random.binomial(n=1, p=1-self.corruption_level, size=x.shape)*x
 
     def kl_divergence(self, p, p_hat):
-        print '*'*100
-        print p, p_hat
-        return tf.reduce_mean(p * tf.log(p) - p * tf.log(p_hat) + (1 - p) * tf.log(1 - p) -
-                              (1 - p) * tf.log(1 - p_hat))
+        return tf.cast(tf.shape(p_hat)[1], tf.float32)*(p*tf.log(p) + (1-p)*tf.log(1-p))\
+               - p*tf.reduce_sum(tf.log(tf.reduce_mean(p_hat, axis=0) + 1e-6))\
+               - (1-p)*tf.reduce_sum(tf.log(1-tf.reduce_mean(p_hat, axis=0) + 1e-6))
 
     def fit(self, x):
         for i in range(self.depth):
