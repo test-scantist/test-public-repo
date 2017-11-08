@@ -45,6 +45,8 @@ class StackedAutoEncoder:
         return np.random.binomial(n=1, p=1-self.corruption_level, size=x.shape)*x
 
     def kl_divergence(self, p, p_hat):
+        print '*'*100
+        print p, p_hat
         return tf.reduce_mean(p * tf.log(p) - p * tf.log(p_hat) + (1 - p) * tf.log(1 - p) -
                               (1 - p) * tf.log(1 - p_hat))
 
@@ -96,8 +98,7 @@ class StackedAutoEncoder:
         elif self.config == 2:
             loss = -tf.reduce_mean(tf.reduce_sum(x_*tf.log(decoded) + (1-x_)*tf.log(1-decoded),
                                    axis=1)) +\
-                    self.penalty*self.kl_divergence(self.sparsity, encoded) +\
-                    self.penalty*self.kl_divergence(self.sparsity, decoded)
+                    self.penalty*self.kl_divergence(self.sparsity, encoded)
             train_op = tf.train.MomentumOptimizer(self.lr, self.momentum).minimize(loss)
 
         sess.run(tf.global_variables_initializer())
