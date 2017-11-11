@@ -42,36 +42,36 @@ def deepnn(x, save_image=False):
 
     # Pooling layer - downsamples by 2X.
     # Output shape = [-1, 10, 10, 15]
-    with tf.name_scope('pool1'):
+    with tf.name_scope('S1'):
         S1 = max_pool_2x2(C1)
 
     # Second convolutional layer -- maps 15 feature maps to 20.
     # Output shape = [-1, 6, 6, 20]
-    with tf.name_scope('conv2'):
+    with tf.name_scope('C2'):
         W_C2 = weight_variable([5, 5, 15, 20])
         b_C2 = bias_variable([20])
         C2 = tf.nn.relu(conv2d(S1, W_C2) + b_C2)
 
     # Second pooling layer.
     # Output shape = [-1, 3, 3, 20]
-    with tf.name_scope('pool2'):
+    with tf.name_scope('S2'):
         S2 = max_pool_2x2(C2)
 
     # Fully connected layer 1 -- after 2 round of downsampling, our 28x28 image
     # is down to 3x3x20 feature maps -- maps this to 100 features.
-    with tf.name_scope('fc1'):
+    with tf.name_scope('F3'):
         W_F3 = weight_variable([3 * 3 * 20, 100])
         b_F3 = bias_variable([100])
 
         S2_flat = tf.reshape(S2, [-1, 3 * 3 * 20])
-        h_fc1 = tf.nn.relu(tf.matmul(S2_flat, W_F3) + b_F3)
+        F3 = tf.nn.relu(tf.matmul(S2_flat, W_F3) + b_F3)
 
     # Map the 100 features to 10 classes, one for each digit
-    with tf.name_scope('fc2'):
+    with tf.name_scope('F4'):
         W_F4 = weight_variable([100, 10])
         b_F4 = bias_variable([10])
 
-        F4 = tf.matmul(h_fc1, W_F4) + b_F4
+        F4 = tf.matmul(F3, W_F4) + b_F4
     if save_image:
         return C1, S1, C2, S2
     return F4
@@ -124,27 +124,19 @@ def main(_):
     vars = tf.trainable_variables()
     lossL2 = tf.add_n([tf.nn.l2_loss(v) for v in vars if 'weight' in v.name]) * 0.0001
     cross_entropy += lossL2
-    global_step = tf.Variable(0, trainable=False)
     if config == 1:
-        decay_steps = int(batch_size*num_epochs)
-        decayed_learning_rate = tf.train.exponential_decay(learning_rate,
-                                                           global_step,
-                                                           decay_steps,
-                                                           decay_param,
-                                                           staircase=True)
         with tf.name_scope('Optimizer'):
-            train_step = tf.train.GradientDescentOptimizer(decayed_learning_rate).minimize(
-                cross_entropy)
+            opt = tf.train.GradientDescentOptimizer(learning_rate)
+            grads_and_vars = opt.compute_gradients(cross_entropy, tf.trainable_variables)
+            my_grads_and_vars = [((g + decay_param*v)*learning_rate, v) for g, v in grads_and_vars]
+            train_step = opt.apply_gradients(my_grads_and_vars)
+
     elif config == 2:
-        decay_steps = int(batch_size*num_epochs)
-        decayed_learning_rate = tf.train.exponential_decay(learning_rate,
-                                                           global_step,
-                                                           decay_steps,
-                                                           decay_param,
-                                                           staircase=True)
         with tf.name_scope('Optimizer'):
-            train_step = tf.train.MomentumOptimizer(decayed_learning_rate, momentum_param).minimize(
-                cross_entropy)
+            opt = tf.train.MomentumOptimizer(learning_rate, momentum_param)
+            grads_and_vars = opt.compute_gradients(cross_entropy, tf.trainable_variables)
+            my_grads_and_vars = [((g + decay_param*v)*learning_rate, v) for g, v in grads_and_vars]
+            train_step = opt.apply_gradients(my_grads_and_vars)
     elif config == 3:
         with tf.name_scope('Optimizer'):
             train_step = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=1e-4, momentum=0.9,
