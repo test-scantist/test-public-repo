@@ -13,7 +13,7 @@ batch_size = 128
 decay_param = 0.0001
 momentum_param = 0.1
 num_epochs = 100
-config = 3
+config = 1
 
 
 def deepnn(x, save_image=False):
@@ -127,15 +127,15 @@ def main(_):
     if config == 1:
         with tf.name_scope('Optimizer'):
             opt = tf.train.GradientDescentOptimizer(learning_rate)
-            grads_and_vars = opt.compute_gradients(cross_entropy, tf.trainable_variables)
-            my_grads_and_vars = [((g + decay_param*v)*learning_rate, v) for g, v in grads_and_vars]
+            grads_and_vars = opt.compute_gradients(cross_entropy, tf.trainable_variables())
+            my_grads_and_vars = [((g + decay_param*v)*learning_rate, v) for g, v in grads_and_vars if g is not None]
             train_step = opt.apply_gradients(my_grads_and_vars)
 
     elif config == 2:
         with tf.name_scope('Optimizer'):
             opt = tf.train.MomentumOptimizer(learning_rate, momentum_param)
-            grads_and_vars = opt.compute_gradients(cross_entropy, tf.trainable_variables)
-            my_grads_and_vars = [((g + decay_param*v)*learning_rate, v) for g, v in grads_and_vars]
+            grads_and_vars = opt.compute_gradients(cross_entropy, tf.trainable_variables())
+            my_grads_and_vars = [((g + decay_param*v)*learning_rate, v) for g, v in grads_and_vars if g is not None]
             train_step = opt.apply_gradients(my_grads_and_vars)
     elif config == 3:
         with tf.name_scope('Optimizer'):
