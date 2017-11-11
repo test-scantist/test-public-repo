@@ -149,7 +149,7 @@ def main():
         1: [train_da2, enc2, W2, 30, 25],
         2: [train_da3, enc3, W3, 25, 20]
     }
-    '''
+
     data = trX
     d_t = teX[:100]
     for hidden in range(3):
@@ -173,12 +173,10 @@ def main():
     de3 = dec3(d_t)
     de2 = dec2(de3)
     de = dec1(de2)
-    '''
     cr = corrupted(teX[:100])
 
-    #save_images(np.reshape(de[:100], [100, 28, 28]), [10, 10], 'clean_%d.png' % (config), spacing=0)
+    save_images(np.reshape(de[:100], [100, 28, 28]), [10, 10], 'clean_%d.png' % (config), spacing=0)
     save_images(np.reshape(cr, [100, 28, 28]), [10, 10], 'corrupted_%d.png' % (config), spacing=0)
-    '''
     print ('Training feed-forward network')
     d, a = [], []
     for epoch in range(training_epochs):
@@ -192,7 +190,6 @@ def main():
               ylabel="Categorical Cross Entropy Loss")
     save_plot(a, "ae_classify_%d_test_acc" % (config), label="test_accuracy",
               ylabel="Accuracy")
-    '''
 
 if __name__ == "__main__":
     main()
