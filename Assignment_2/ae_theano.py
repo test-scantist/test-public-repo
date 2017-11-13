@@ -53,22 +53,6 @@ class sgd(object):
             	updates.append((param, param - learning_rate * grad))
         return updates
 
-'''
-def sgd(cost, params, learning_rate, momentum=False):
-    grads = T.grad(cost, params)
-    updates = []
-    for p, g in zip(params, grads):
-        if momentum:
-            mparam_i = theano.shared(np.zeros(p.get_value().shape,
-                                     dtype=theano.config.floatX))
-            v = moment * mparam_i - learning_rate * g
-            updates.append((mparam_i, v))
-            updates.append((p, p + v))
-        else:
-            updates.append((p, p - learning_rate * g))
-    return updates
-'''
-
 def cross_entropy(x, h):
     c = T.mean(T.sum(x * T.log(h) + (1 - x) * T.log(1 - h), axis=1))
     return c
