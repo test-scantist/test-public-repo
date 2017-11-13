@@ -34,6 +34,26 @@ def init_bias(n):
                          borrow=True)
 
 
+class sgd(object):
+    def __init__(self, params):
+        self.memory_ = [theano.shared(np.zeros_like(p.get_value()))
+                        for p in params]
+	self.moment = 0.1
+
+    def updates(self, cost, params, learning_rate, momentum=False):
+        updates = []
+	grads = T.grad(cost, params)
+        for n, (param, grad) in enumerate(zip(params, grads)):
+	    if momentum:
+            	memory = self.memory_[n]
+            	update = self.moment * memory - learning_rate * grad
+            	updates.append((memory, update))
+            	updates.append((param, param + update))
+	    else:
+            	updates.append((param, param - learning_rate * grad))
+        return updates
+
+'''
 def sgd(cost, params, learning_rate, momentum=False):
     grads = T.grad(cost, params)
     updates = []
@@ -47,7 +67,7 @@ def sgd(cost, params, learning_rate, momentum=False):
         else:
             updates.append((p, p - learning_rate * g))
     return updates
-
+'''
 
 def cross_entropy(x, h):
     c = T.mean(T.sum(x * T.log(h) + (1 - x) * T.log(1 - h), axis=1))
@@ -119,13 +139,17 @@ else:
 costffn = T.mean(T.nnet.categorical_crossentropy(y_classify, y_))
 
 params1 = [W1, b1, b1_prime]
-updates1 = sgd(cost1, params1, learning_rate, momentum=momentum)
+opt1 = sgd(params1)
+updates1 = opt1.updates(cost1, params1, learning_rate, momentum=momentum)
 params2 = [W2, b2, b2_prime]
-updates2 = sgd(cost2, params2, learning_rate, momentum=momentum)
+opt2 = sgd(params2)
+updates2 = opt2.updates(cost2, params2, learning_rate, momentum=momentum)
 params3 = [W3, b3, b3_prime]
-updates3 = sgd(cost3, params3, learning_rate, momentum=momentum)
+opt3 = sgd(params3)
+updates3 = opt3.updates(cost3, params3, learning_rate, momentum=momentum)
 paramsffn = [W1, b1, W2, b2, W3, b3, W4, b4]
-updatesffn = sgd(costffn, paramsffn, learning_rate, momentum=momentum)
+optffn = sgd(paramsffn)
+updatesffn = optffn.updates(costffn, paramsffn, learning_rate, momentum=momentum)
 
 corrupted = theano.function(inputs=[x], outputs=tilde_x, allow_input_downcast=True)
 train_da1 = theano.function(inputs=[x], outputs=cost1, updates=updates1, allow_input_downcast=True)
