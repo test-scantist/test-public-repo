@@ -179,17 +179,21 @@ def main():
     save_images(np.reshape(cr, [100, 28, 28]), [10, 10], 'corrupted_%d.png' % (config), spacing=0)
     print ('Training feed-forward network')
     d, a = [], []
+    best_acc = 0
     for epoch in range(training_epochs):
         c = []
         for i in range(0, len(data), batch_size):
             c.append(train_ffn(trX[i:i+batch_size], trY[i:i+batch_size]))
         d.append(np.mean(c, dtype='float64'))
         a.append(np.mean(np.argmax(teY, axis=1) == test_ffn(teX)))
+	if a[-1] > best_acc:
+		best_acc = a[-1]
         print('epoch %d:\tloss = %.2f\tacc = %.2f' % (epoch, d[-1], a[-1]))
     save_plot(d, "ae_classify_%d_train_error" % (config),
               ylabel="Categorical Cross Entropy Loss")
     save_plot(a, "ae_classify_%d_test_acc" % (config), label="test_accuracy",
               ylabel="Accuracy")
+    print('Best accuracy = %.2f' % (best_acc*100))
 
 if __name__ == "__main__":
     main()
