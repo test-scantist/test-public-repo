@@ -13,7 +13,7 @@ batch_size = 128
 decay_param = 0.0001
 momentum_param = 0.1
 num_epochs = 100
-config = 1
+config = 3
 
 
 def deepnn(x, save_image=False):
@@ -152,6 +152,7 @@ def main(_):
         num_iters = trX.shape[0]//batch_size
         train_errors = []
         test_accuracy = []
+	best_acc = 0
         for epoch in range(num_epochs):
             for i in range(num_iters):
                 batch = mnist.train.next_batch(batch_size)
@@ -160,11 +161,14 @@ def main(_):
             acc = sess.run(accuracy, feed_dict={x: teX, y: teY})
             train_errors.append(l)
             test_accuracy.append(acc)
+	    if acc > best_acc:
+		best_acc = acc
             print('epoch %d: loss = %.2f, accuracy = %.2f' % (epoch, l, acc))
         save_plot(train_errors, "cnn_classify_%d_train_error" % (config),
                   ylabel="Categorical Cross Entropy Loss")
         save_plot(test_accuracy, "cnn_classify_%d_test_acc" % (config), label="test_accuracy",
                   ylabel="Accuracy")
+	print('Best accuracy = %.2f' % (best_acc*100))
         C1, S1, C2, S2 = sess.run(feature_maps, feed_dict={x: teX, y: teY})
         names = ["C1", "S1", "C2", "S2"]
         i = 0

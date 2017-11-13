@@ -26,6 +26,6 @@ def save_plot(vals, name, label="train_error", xlabel="epoch", ylabel="Cross Ent
     plt.plot(vals, label=label)
     plt.ylabel(ylabel)
     plt.xlabel(xlabel)
-    plt.legend()
+    plt.legend(loc='best')
     plt.savefig("plots/"+name, dpi=300)
     plt.clf()
