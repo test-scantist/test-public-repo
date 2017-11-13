@@ -19,6 +19,7 @@
     |_visualisation_part_B.ipynb                  - to training/test plots for question 2
   |_cal_regression.py                             - training/testing code for question 1
   |_sat_classification.py                         - training/testing code for question 2
+
 |_Assignment_2
   |_MNIST_data                                    - training and test sets of MNIST
   |_misc                                          
