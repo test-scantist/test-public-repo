@@ -34,24 +34,25 @@ def init_bias(n):
                          borrow=True)
 
 
-class sgd(object):
+class SGD(object):
     def __init__(self, params):
         self.memory_ = [theano.shared(np.zeros_like(p.get_value()))
                         for p in params]
-	self.moment = 0.1
+        self.moment = 0.1
 
     def updates(self, cost, params, learning_rate, momentum=False):
         updates = []
-	grads = T.grad(cost, params)
+        grads = T.grad(cost, params)
         for n, (param, grad) in enumerate(zip(params, grads)):
-	    if momentum:
-            	memory = self.memory_[n]
-            	update = self.moment * memory - learning_rate * grad
-            	updates.append((memory, update))
-            	updates.append((param, param + update))
-	    else:
-            	updates.append((param, param - learning_rate * grad))
+            if momentum:
+                    memory = self.memory_[n]
+                    update = self.moment * memory - learning_rate * grad
+                    updates.append((memory, update))
+                    updates.append((param, param + update))
+            else:
+                updates.append((param, param - learning_rate * grad))
         return updates
+
 
 def cross_entropy(x, h):
     c = T.mean(T.sum(x * T.log(h) + (1 - x) * T.log(1 - h), axis=1))
@@ -123,16 +124,16 @@ else:
 costffn = T.mean(T.nnet.categorical_crossentropy(y_classify, y_))
 
 params1 = [W1, b1, b1_prime]
-opt1 = sgd(params1)
+opt1 = SGD(params1)
 updates1 = opt1.updates(cost1, params1, learning_rate, momentum=momentum)
 params2 = [W2, b2, b2_prime]
-opt2 = sgd(params2)
+opt2 = SGD(params2)
 updates2 = opt2.updates(cost2, params2, learning_rate, momentum=momentum)
 params3 = [W3, b3, b3_prime]
-opt3 = sgd(params3)
+opt3 = SGD(params3)
 updates3 = opt3.updates(cost3, params3, learning_rate, momentum=momentum)
 paramsffn = [W1, b1, W2, b2, W3, b3, W4, b4]
-optffn = sgd(paramsffn)
+optffn = SGD(paramsffn)
 updatesffn = optffn.updates(costffn, paramsffn, learning_rate, momentum=momentum)
 
 corrupted = theano.function(inputs=[x], outputs=tilde_x, allow_input_downcast=True)
@@ -194,8 +195,8 @@ def main():
             c.append(train_ffn(trX[i:i+batch_size], trY[i:i+batch_size]))
         d.append(np.mean(c, dtype='float64'))
         a.append(np.mean(np.argmax(teY, axis=1) == test_ffn(teX)))
-	if a[-1] > best_acc:
-		best_acc = a[-1]
+    if a[-1] > best_acc:
+        best_acc = a[-1]
         print('epoch %d:\tloss = %.2f\tacc = %.2f' % (epoch, d[-1], a[-1]))
     save_plot(d, "ae_classify_%d_train_error" % (config),
               ylabel="Categorical Cross Entropy Loss")
