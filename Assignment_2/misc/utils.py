@@ -12,7 +12,7 @@ def save_images(images, size, image_path, spacing=5):
 
 def merge(images, size, spacing):
     h, w = images.shape[1], images.shape[2]
-    img = np.ones(((h+spacing) * size[0] + spacing, (w+spacing) * size[1] + spacing))
+    img = np.zeros(((h+spacing) * size[0] + spacing, (w+spacing) * size[1] + spacing)) + np.max(images)
 
     for idx, image in enumerate(images):
         i = idx % size[1]

@@ -7,7 +7,7 @@ from misc.utils import save_images, save_plot
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
 corruption_level = 0.1
-training_epochs = 75
+training_epochs = 100
 learning_rate = 0.1
 batch_size = 128
 moment = 0.1
